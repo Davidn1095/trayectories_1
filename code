@@ -1,0 +1,227 @@
+#Leemos los datos
+datos=read.table("Datos para ejemplo con una trayectoria.txt", 
+  header=TRUE, sep="", na.strings="NA", dec=",", strip.white=TRUE);
+datos=t(datos)
+
+d=1;
+n=dim(datos)[[2]];
+y=matrix(0,ncol=n,nrow=d)
+y[1,]=datos[2,];
+t=datos[1,];
+k=d*n;
+h=t[[2]]-t[[1]];
+
+#Definimos las funciones que nos daran las estimaciones de los parametros
+
+#A1[x_] := Sum[Sum[x^t[[j - 1]], {j, 2, n}], {i, 1, d}];
+A1<-function(x){ 
+  suma = 0
+  for (i in 1:d)  
+  {
+    for(j in 2:n){suma = suma + x^t[[j-1]]}
+
+  }
+  suma
+}
+#A2[x_] := Sum[Sum[x^(2*t[[j - 1]]), {j, 2, n}], {i, 1, d}];
+A2<-function(x){ 
+  suma = 0
+  for (i in 1:d)  
+  {
+    for(j in 2:n){suma = suma + x^(2*t[[j-1]])}
+
+  }
+  suma
+}
+#A3[x_] := Sum[Sum[Log[y[[i, j]]/y[[i, j - 1]]]*x^t[[j - 1]], {j, 2, n}], {i, 1, d}];
+A3<-function(x){
+  suma = 0
+  for (i in 1:d)  
+  {
+    for(j in 2:n){suma = suma + log(y[[i, j]]/y[[i, j - 1]])*x^(t[[j-1]])}
+
+  }
+  suma
+}
+#A4 = Sum[Sum[(Log[y[[i, j]]/y[[i, j - 1]]])^2, {j, 2, n}], {i, 1, d}];
+A4=0
+for (i in 1:d)  
+  {
+    for(j in 2:n){A4 = A4 + log(y[[i, j]]/y[[i, j - 1]])^2}
+
+  }
+#A5 = Sum[Sum[(Log[y[[i, j]]/y[[i, j - 1]]]), {j, 2, n}], {i, 1, d}];
+A5=0
+for (i in 1:d)  
+  {
+    for(j in 2:n){A5 = A5 + log(y[[i, j]]/y[[i, j - 1]])}
+
+  }
+#A12[x_] := Sum[Sum[x^t[[j - 1]]*t[[j - 1]], {j, 2, n}], {i, 1, d}];
+A12<-function(x){ 
+  suma = 0
+  for (i in 1:d)  
+  {
+    for(j in 2:n){suma = suma + x^t[[j-1]]*t[[j-1]]}
+
+  }
+  suma
+}
+#A22[x_] := Sum[Sum[x^(2*t[[j - 1]])*t[[j - 1]], {j, 2, n}], {i, 1, d}];
+A22<-function(x){ 
+  suma = 0
+  for (i in 1:d)  
+  {
+    for(j in 2:n){suma = suma + x^(2*t[[j-1]])*t[[j-1]]}
+
+  }
+  suma
+}
+#A32[x_]:=Sum[Sum[Log[y[[i,j]]/y[[i,j-1]]]*x^t[[j-1]]*t[[j-1]],{j,2,n}],{i,1 d}];
+A32<-function(x){
+  suma = 0
+  for (i in 1:d)  
+  {
+    for(j in 2:n){suma = suma + log(y[[i, j]]/y[[i, j - 1]])*x^(t[[j-1]])*t[[j-1]]}
+
+  }
+  suma
+} 
+#fa[x_] := (A1[x]*A32[x] - A12[x]*A3[x])/(((x^h - 1))*((A12[x]*A2[x] - A1[x]*A22[x]))))
+fa<-function(x){
+(A1(x)*A32(x) - A12(x)*A3(x))/((x^h - 1)*(A12(x)*A2(x) - A1(x)*A22(x)))
+}
+#fs[x_]:=1/(h((k-d)))*1/(A12[x]*A2[x]-A1[x]*A22[x])*((A4*A12[x]*A2[x]-A4*A1[x]*A22[x]+A1[x]*A32[x]*A3[x]-A12[x]*((A3[x]))^2 + A3[x]*A22[x]*A5 - A32[x]*A2[x]*A5)))
+fs<-function(x){
+(1/(h*(k-d)))*(1/(A12(x)*A2(x)-A1(x)*A22(x)))*(A4*A12(x)*A2(x)-A4*A1(x)*A22(x)+A1(x)*A32(x)*A3(x)-A12(x)*(A3(x))^2+A3(x)*A22(x)*A5-A32(x)*A2(x)*A5)
+}
+
+#fc[x_]:=fs[x]/2-1/h*(A2[x]*A32[x]-A22[x]*A3[x])/(A1[x]*A22[x]-A12[x]*A2[x]))
+fc<-function(x){
+fs(x)/2-1/h*(A2(x)*A32(x)-A22(x)*A3(x))/(A1(x)*A22(x)-A12(x)*A2(x))
+}
+#fb[x_]:=A5+fa[x]*((x^h-1))*A1[x]+((fs[x]/2 - fc[x]))*h*((k - d))
+fb<-function(x){
+A5+fa(x)*(x^h-1)*A1(x)+(fs(x)/2-fc(x))*h*(k - d)
+}
+
+plot(fb,c(0,1))#dibujo de fb en el intervalo (0,1)
+
+#Cargar paquete rootSolve para resolver numericamente la ecuacion en b.
+library(rootSolve) 
+
+b<-uniroot.all(fb,c(0,1))
+
+
+
+#Estimaciones de los parametros
+auxA<-fa(b)
+auxC<-fc(b)
+auxS2<-fs(b)
+auxM<-auxA*(-log(b))
+auxBeta<-(-log(b))
+
+
+
+#Estimacion con la media
+mediapred<-function(r){
+y[[1,1]]*exp(auxC*(t[[r]]-t[[1]]) - auxA*(b^(t[[r]]) - b^(t[[1]])))}
+prediccionmed<-matrix(,1,n)
+for(i in 1:n){prediccionmed[[i]]=mediapred(i)}
+write(prediccionmed,"Medpred.txt",ncolumns=1)
+
+#Estimacion con la moda
+modapred<-function(r){y[[1,1]]*exp(auxC*(t[[r]]-t[[1]])-
+auxA*(b^(t[[r]])-b^(t[[1]])))*exp(- (3/2)*auxS2*(t[[r]]-t[[1]]))}
+prediccionmoda<-matrix(,1,n)
+for(i in 1:n){prediccionmoda[[i]]=modapred(i)}
+write(prediccionmoda,"Modapred.txt",ncolumns=1)
+
+#Estimacion con la mediana
+medianapred<-function(r){y[[1,1]]*exp(auxC*(t[[r]]-t[[1]])-
+auxA*(b^(t[[r]])-b^(t[[1]])))*exp(- (1/2)*auxS2*(t[[r]]-t[[1]]))}
+prediccionmediana<-matrix(,1,n)
+for(i in 1:n){prediccionmediana[[i]]=medianapred(i)}
+write(prediccionmediana,"Medianapred.txt",ncolumns=1)
+
+#Estimacion con cuantil 0.05
+cuantil5pred<-function(r){y[[1,1]]*exp(auxC*(t[[r]]-t[[1]])-
+auxA*(b^(t[[r]])-b^(t[[1]])))*exp(- (1/2)*auxS2*(t[[r]]-t[[1]])-
+1.645*(auxS2*(t[[r]]-t[[1]]))^(1/2))}
+prediccioncuantil5<-matrix(,1,n)
+for(i in 1:n){prediccioncuantil5[[i]]=cuantil5pred(i)}
+write(prediccioncuantil5,"Cuantil5pred.txt",ncolumns=1)
+
+#Estimacion con cuantil 0.95
+cuantil95pred<-function(r){y[[1,1]]*exp(auxC*(t[[r]]-t[[1]])-
+auxA*(b^(t[[r]])-b^(t[[1]])))*exp(- (1/2)*auxS2*(t[[r]]-t[[1]])+
+1.645*(auxS2*(t[[r]]-t[[1]]))^(1/2))}
+prediccioncuantil95<-matrix(,1,n)
+for(i in 1:n){prediccioncuantil95[[i]]=cuantil95pred(i)}
+write(prediccioncuantil95,"Cuantil95pred.txt",ncolumns=1)
+
+#Estimacion con la media condicionada al valor del instante anterior
+mediacondpred<-function(r){
+y[[1,r-1]]*exp(auxC*(t[[r]]-t[[r-1]]) - auxA*(b^(t[[r]]) - b^(t[[r-1]])))}
+prediccionmedcond<-matrix(,1,n)
+for(i in 2:n){prediccionmedcond[[i]]=mediacondpred(i)}
+write(prediccionmedcond,"MedCondpred.txt",ncolumns=1)
+
+#Estimacion con la moda condicionada al valor del instante anterior
+modacondpred<-function(r){y[[1,r-1]]*exp(auxC*(t[[r]]-t[[r-1]])-
+auxA*(b^(t[[r]])-b^(t[[r-1]])))*exp(- (3/2)*auxS2*(t[[r]]-t[[r-1]]))}
+prediccionmodacond<-matrix(,1,n)
+for(i in 2:n){prediccionmodacond[[i]]=modacondpred(i)}
+write(prediccionmodacond,"ModaCondpred.txt",ncolumns=1)
+
+#Estimacion con la mediana condicionada al valor del instante anterior
+medianacondpred<-function(r){y[[1,r-1]]*exp(auxC*(t[[r]]-t[[r-1]])-
+auxA*(b^(t[[r]])-b^(t[[r-1]])))*exp(- (1/2)*auxS2*(t[[r]]-t[[r-1]]))}
+prediccionmedianacond<-matrix(,1,n)
+for(i in 2:n){prediccionmedianacond[[i]]=medianacondpred(i)}
+write(prediccionmedianacond,"Medianacondpred.txt",ncolumns=1)
+
+#Estimacion con cuantil 0.05 condicionada al valor del instante anterior
+cuantil5condpred<-function(r){y[[1,r-1]]*exp(auxC*(t[[r]]-t[[r-1]])-
+auxA*(b^(t[[r]])-b^(t[[r-1]])))*exp(- (1/2)*auxS2*(t[[r]]-t[[r-1]])-
+1.645*(auxS2*(t[[r]]-t[[r-1]]))^(1/2))}
+prediccioncuantil5cond<-matrix(,1,n)
+for(i in 2:n){prediccioncuantil5cond[[i]]=cuantil5condpred(i)}
+write(prediccioncuantil5cond,"Cuantil5Condpred.txt",ncolumns=1)
+
+#Estimacion con cuantil 0.95 condicionada al valor del instante anterior
+cuantil95condpred<-function(r){y[[1,r-1]]*exp(auxC*(t[[r]]-t[[r-1]])-
+auxA*(b^(t[[r]])-b^(t[[r-1]])))*exp(- (1/2)*auxS2*(t[[r]]-t[[r-1]])+
+1.645*(auxS2*(t[[r]]-t[[r-1]]))^(1/2))}
+prediccioncuantil95cond<-matrix(,1,n)
+for(i in 2:n){prediccioncuantil95cond[[i]]=cuantil95condpred(i)}
+write(prediccioncuantil95cond,"Cuantil95Condpred.txt",ncolumns=1)
+
+#Predicciones en el instante siguiente al ultimo observado, t=37.5 
+PrediccionMedia<-function(r){
+y[[1,1]]*exp(auxC*(t[[n]]+r*h-t[[1]]) - auxA*(b^(t[[n]]+r*h) - b^(t[[1]])))}
+PrediccionMedia(1)
+
+PrediccionModa<-function(r){y[[1,1]]*exp(auxC*(t[[n]]+r*h-t[[1]])-
+auxA*(b^(t[[n]]+r*h)-b^(t[[1]])))*exp(- (3/2)*auxS2*(t[[n]]+r*h-t[[1]]))}
+PrediccionModa(1)
+
+PrediccionMediana<-function(r){y[[1,1]]*exp(auxC*(t[[n]]+r*h-t[[1]])-
+auxA*(b^(t[[n]]+r*h)-b^(t[[1]])))*exp(- (1/2)*auxS2*(t[[n]]+r*h-t[[1]]))}
+PrediccionMediana(1)
+
+#Predicciones en el instante siguiente al ultimo observado, t=37.5, condicionada al ultimo dato observado
+
+PrediccionMediaCondicionadaUltimo<-function(r){
+  y[[1,n]]*exp(auxC*(t[[n]]+r*h-t[[n]]) - auxA*(b^(t[[n]]+r*h) - b^(t[[n]])))}
+PrediccionMediaCondicionadaUltimo(1)
+
+PrediccionModaCondicionadaUltimo<-function(r){y[[1,n]]*exp(auxC*(t[[n]]+r*h-t[[n]])-
+auxA*(b^(t[[n]]+r*h)-b^(t[[n]])))*exp(- (3/2)*auxS2*(t[[n]]+r*h-t[[n]]))}
+PrediccionModaCondicionadaUltimo(1)
+
+PrediccionMedianaCondicionadaUltimo<-function(r){y[[1,n]]*exp(auxC*(t[[n]]+r*h-t[[n]])-
+auxA*(b^(t[[n]]+r*h)-b^(t[[n]])))*exp(- (1/2)*auxS2*(t[[n]]+r*h-t[[n]]))}
+PrediccionMedianaCondicionadaUltimo(1)
+
+
